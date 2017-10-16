@@ -140,7 +140,6 @@ function compile({ vShader, fShader, gl }) {
             case '2D': {
                 const textureUnitIndex = textureCount;
                 const textureUnitName = `TEXTURE${textureUnitIndex}`;
-                console.log(textureUnitName, uniform.name);
                 if (textureCount === maxTextureImageUnits) {
                     throw 'texture size exceed max texture image units';
                 } else {
@@ -150,7 +149,6 @@ function compile({ vShader, fShader, gl }) {
                 uniformMethodName = ['uniform', '1', 'i'].join('');
                 const texture = gl.createTexture();
                 manager.fill = function (image) {
-                    console.log('active', textureUnitName);
                     gl.activeTexture(gl[textureUnitName]);
                     gl.bindTexture(gl.TEXTURE_2D, texture);
                     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -188,7 +186,7 @@ function compile({ vShader, fShader, gl }) {
 
     return {
         program, uniforms, attributes,
-        use: function () {
+        useProgram: function () {
             gl.useProgram(program);
         },
         drawArrays: function () {
