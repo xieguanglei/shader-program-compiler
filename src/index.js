@@ -168,7 +168,6 @@ function compile({ vShader, fShader, gl }) {
         return { type, ...manager }
     }
 
-
     let attributeLength, elementLength, textureCount = 0;
     const maxTextureImageUnits = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS);
 
@@ -182,7 +181,6 @@ function compile({ vShader, fShader, gl }) {
     uniformList.forEach(function (uniform) {
         uniforms[uniform.name] = uniformManager(uniform, program, gl);
     });
-
 
     return {
         program, uniforms, attributes,

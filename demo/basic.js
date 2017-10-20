@@ -25,8 +25,7 @@ uniforms.uColor.fill([0.89, 0.49, 0.13]);
 
 function render() {
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
-  gl.clearDepth(1.0);
-  gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.clear(gl.COLOR_BUFFER_BIT);  
   drawElements();
 }
 render();
