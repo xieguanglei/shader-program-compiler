@@ -26,10 +26,10 @@ fillElements([0, 1, 2, 3, 4, 5]);
 attributes.aPosition.fill([
     0, 0, -0.8,
     1, 0, -0.8,
-    0, 1, -0.8,
-    1, 1, 0,
-    1, 0, 0,
-    0, 0, 0
+    0, 1, 0.8,
+    1, 1, -0.5,
+    1, 0, -0.5,
+    0, 0, -0.5
 ]);
 attributes.aColor.fill([
     1, 0, 0,
@@ -42,8 +42,9 @@ attributes.aColor.fill([
 
 function render() {
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clearDepth(0.26);
     gl.enable(gl.DEPTH_TEST);
-    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     drawElements();
 }
 render();
