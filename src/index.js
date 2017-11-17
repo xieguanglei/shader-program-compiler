@@ -1,3 +1,5 @@
+let textureCount = 0;
+
 function compile({ vShader, fShader, gl }) {
 
     function createShaderProgram(vShaderSource, fShaderSource, gl) {
@@ -149,11 +151,18 @@ function compile({ vShader, fShader, gl }) {
                 uniformMethodName = ['uniform', '1', 'i'].join('');
                 const texture = gl.createTexture();
                 manager.fill = function (image) {
-                    gl.activeTexture(gl[textureUnitName]);
-                    gl.bindTexture(gl.TEXTURE_2D, texture);
-                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-                    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-                    gl.uniform1i(position, textureUnitIndex);
+
+                    if (image.src) {
+                        // image or video
+                        gl.activeTexture(gl[textureUnitName]);
+                        gl.bindTexture(gl.TEXTURE_2D, texture);
+                        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+                        gl.uniform1i(position, textureUnitIndex);
+                    } else if (typeof image.unit === 'number' && image.texture) {
+                        // framebuffer
+                        gl.uniform1i(position, image.unit);
+                    }
                 }
                 manager.update = function (image) {
                     gl.activeTexture(gl[textureUnitName]);
@@ -168,7 +177,7 @@ function compile({ vShader, fShader, gl }) {
         return { type, ...manager }
     }
 
-    let attributeLength, elementLength, textureCount = 0;
+    let attributeLength, elementLength;
     const maxTextureImageUnits = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS);
 
     const { program, attributes: attributeList, uniforms: uniformList } = createShaderProgram(vShader, fShader, gl);
@@ -199,6 +208,21 @@ function compile({ vShader, fShader, gl }) {
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
             gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(data), gl.STATIC_DRAW);
             return buffer;
+        },
+        frameBuffer: function () {
+            const fb = gl.createFramebuffer();
+            const tex = gl.createTexture();
+            gl.activeTexture(gl['TEXTURE' + (textureCount++)]);
+            gl.bindTexture(gl.TEXTURE_2D, tex);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 512, 512, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+            gl.viewport(0, 0, 512, 512);
+            return {
+                unit: textureCount - 1,
+                texture: tex
+            };
         }
     };
 }

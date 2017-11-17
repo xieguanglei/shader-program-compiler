@@ -1,5 +1,4 @@
-const DEV_PORT = 3000;
-
+const DEV_PORT = 3001;
 
 const gulp = require('gulp');
 const gUtil = require('gulp-util');
