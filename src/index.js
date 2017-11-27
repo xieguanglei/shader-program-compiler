@@ -120,7 +120,7 @@ function compile({ vShader, fShader, gl }) {
 
         const arrayTypeMap = {
             'FLOAT': Float32Array,
-            'INT': Int16Array,
+            'INT': Int32Array,
             'BOOL': Uint8Array
         }
         const ArrayType = arrayTypeMap[baseType];
@@ -131,6 +131,7 @@ function compile({ vShader, fShader, gl }) {
                 uniformMethodName = ['uniform', vecSize, baseType === 'FLOAT' ? 'f' : 'i', 'v'].join('');
                 manager.fill = function (data) {
                     gl[uniformMethodName](position, new ArrayType(data));
+                    // gl[uniformMethodName](gl.getUniformLocation(program, 'uColor[0]'), new ArrayType(data));
                 }
                 break;
             case 'MAT':
@@ -188,7 +189,11 @@ function compile({ vShader, fShader, gl }) {
         attributes[attribute.name] = attributeManager(attribute, program, gl);
     });
     uniformList.forEach(function (uniform) {
-        uniforms[uniform.name] = uniformManager(uniform, program, gl);
+        let name = uniform.name;
+        if (name.endsWith('[0]')) {
+            name = name.replace('[0]', '');
+        }
+        uniforms[name] = uniformManager(uniform, program, gl);
     });
 
     return {
