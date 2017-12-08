@@ -19,19 +19,20 @@ void main() {
 
 const gl = document.getElementById('root').getContext('webgl');
 
-const { useProgram, attributes, uniforms, fillElements, drawElements } = compile({
+const { attributes, uniforms, fillElements, drawElements, createElementsBuffer } = compile({
   vShader, fShader, gl
 });
 
-useProgram();
-fillElements([0, 1, 2]);
-attributes.aPosition.fill([0.4, 0.5, 0.5, -0.8, -0.5, -0.2]);
+fillElements(createElementsBuffer([0, 1, 2]));
+attributes.aPosition.fill(
+  attributes.aPosition.createBuffer([0.4, 0.5, 0.5, -0.8, -0.5, -0.2])
+);
 uniforms.uColor.fill([0.0, 0.0, 0.9, 0.9, 0.0, 0.0]);
 uniforms.uType.fill([1, 2]);
 
 function render() {
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
   gl.clear(gl.COLOR_BUFFER_BIT);
-  drawElements();
+  drawElements(3);
 }
 render();

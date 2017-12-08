@@ -1,5 +1,8 @@
 let textureCount = 0;
 
+
+
+
 function compile({ vShader, fShader, gl }) {
 
     function createShaderProgram(vShaderSource, fShaderSource, gl) {
@@ -80,28 +83,19 @@ function compile({ vShader, fShader, gl }) {
         }
         const ArrayType = arrayTypeMap[baseType];
 
-        manager.fill = function (data) {
-            const length = data.length / vecSize;
-            if (length - Math.floor(length) !== 0) {
-                throw new Error(`attribute ${attribute.name}'s length invalid, expect times of ${vecSize} but ${data.length}`)
-            }
-
-            if (attributeLength) {
-                if (attributeLength === data.length / vecSize) {
-                    // ok, do nothing
-                } else {
-                    throw new Error(`attribute ${attribute.name}'s length invalid, expect ${attributeLength} but ${data.length}`);
-                }
-            } else {
-                attributeLength = data.length / vecSize;
-            }
-
-            const buffer = gl.createBuffer();
+        manager.fill = function (buffer) {
             gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-            gl.bufferData(gl.ARRAY_BUFFER, new ArrayType(data), gl.STATIC_DRAW);
             gl.vertexAttribPointer(position, vecSize, gl[baseType], false, 0, 0);
             gl.enableVertexAttribArray(position);
-        }
+        };
+
+        manager.createBuffer = function (value) {
+            const buffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new ArrayType(value), gl.STATIC_DRAW);
+            gl.bindBuffer(gl.ARRAY_BUFFER, null);
+            return buffer;
+        };
 
         return {
             type, ...manager
@@ -148,25 +142,49 @@ function compile({ vShader, fShader, gl }) {
                 } else {
                     textureCount++;
                 }
+                // uniformMethodName = ['uniform', '1', 'i'].join('');
 
-                uniformMethodName = ['uniform', '1', 'i'].join('');
-                const texture = gl.createTexture();
-                manager.fill = function (image) {
-
-                    if (image.src) {
-                        // image or video
-                        gl.activeTexture(gl[textureUnitName]);
-                        gl.bindTexture(gl.TEXTURE_2D, texture);
-                        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-                        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-                        gl.uniform1i(position, textureUnitIndex);
-                    } else if (typeof image.unit === 'number' && image.texture) {
-                        // framebuffer
-                        gl.uniform1i(position, image.unit);
-                    }
-                }
-                manager.update = function (image) {
+                manager.createTexture = function (image) {
+                    const texture = gl.createTexture();
                     gl.activeTexture(gl[textureUnitName]);
+                    gl.bindTexture(gl.TEXTURE_2D, texture);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                    if (image instanceof Uint8Array) {
+                        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, image);
+                    } else {
+                        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+                    }
+                    gl.bindTexture(gl.TEXTURE_2D, null);
+                    return texture;
+                };
+                manager.fill = function (texture) {
+                    gl.activeTexture(gl[textureUnitName]);
+                    gl.bindTexture(gl.TEXTURE_2D, texture);
+                    gl.uniform1i(position, textureUnitIndex);
+                }
+
+                // const texture = gl.createTexture();                
+                // manager.fill = function (image) {
+
+                //     if (image.src) {
+                //         // image or video
+                //         gl.activeTexture(gl[textureUnitName]);
+                //         gl.bindTexture(gl.TEXTURE_2D, texture);
+                //         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                //         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                //         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                //         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+                //         gl.uniform1i(position, textureUnitIndex);
+                //     } else if (typeof image.unit === 'number' && image.texture) {
+                //         // framebuffer
+                //         gl.uniform1i(position, image.unit);
+                //     }
+                // }
+                manager.update = function (texture, image) {
+                    gl.activeTexture(gl[textureUnitName]);
+                    gl.bindTexture(gl.TEXTURE_2D, texture);
                     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
                 }
                 break;
@@ -178,9 +196,7 @@ function compile({ vShader, fShader, gl }) {
         return { type, ...manager }
     }
 
-    let attributeLength, elementLength;
     const maxTextureImageUnits = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS);
-
     const { program, attributes: attributeList, uniforms: uniformList } = createShaderProgram(vShader, fShader, gl);
 
     const attributes = {};
@@ -196,24 +212,32 @@ function compile({ vShader, fShader, gl }) {
         uniforms[name] = uniformManager(uniform, program, gl);
     });
 
+    gl.useProgram(program);
+
     return {
-        program, uniforms, attributes,
-        useProgram: function () {
-            gl.useProgram(program);
+        program,
+        uniforms,
+        attributes,
+
+        drawArrays: function (count) {
+            gl.drawArrays(gl.TRIANGLES, 0, count);
         },
-        drawArrays: function () {
-            gl.drawArrays(gl.TRIANGLES, 0, attributeLength);
+
+        drawElements: function (count) {
+            gl.drawElements(gl.TRIANGLES, count, gl.UNSIGNED_SHORT, 0);
         },
-        drawElements: function () {
-            gl.drawElements(gl.TRIANGLES, elementLength, gl.UNSIGNED_SHORT, 0);
-        },
-        fillElements: function (data) {
-            elementLength = data.length;
+        createElementsBuffer: function (value) {
             const buffer = gl.createBuffer();
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
-            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(data), gl.STATIC_DRAW);
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(value), gl.STATIC_DRAW);
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
             return buffer;
         },
+        fillElements: function (buffer) {
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
+            return buffer;
+        },
+
         frameBuffer: function () {
             const fb = gl.createFramebuffer();
             const tex = gl.createTexture();

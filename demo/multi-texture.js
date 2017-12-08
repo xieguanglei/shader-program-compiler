@@ -77,22 +77,22 @@ void main() {
 
   const gl = document.getElementById('root').getContext('webgl');
 
-  const { program, attributes, uniforms, fillElements, drawArrays, drawElements } = compile({
+  const { attributes, uniforms, fillElements, drawArrays, createElementsBuffer, drawElements } = compile({
     vShader, fShader, gl
   });
 
-  gl.useProgram(program);
-  fillElements([0, 1, 2, 0, 2, 3]);
-  attributes.aPosition.fill([-1, 1, -1, -1, 1, -1, 1, 1]);
-  attributes.aTexCoord.fill([0, 0, 0, 1, 1, 1, 1, 0]);
-  uniforms.uVideo.fill(video);
-  uniforms.uImage.fill(image);
+  fillElements(createElementsBuffer([0, 1, 2, 0, 2, 3]));
+  attributes.aPosition.fill(attributes.aPosition.createBuffer([-1, 1, -1, -1, 1, -1, 1, 1]));
+  attributes.aTexCoord.fill(attributes.aTexCoord.createBuffer([0, 0, 0, 1, 1, 1, 1, 0]));
+  const videoTexture = uniforms.uVideo.createTexture(video);
+  uniforms.uVideo.fill(videoTexture);
+  uniforms.uImage.fill(uniforms.uImage.createTexture(image));
 
   function render() {
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
-    uniforms.uVideo.update(video);
-    drawElements();
+    uniforms.uVideo.update(videoTexture, video);
+    drawElements(6);
     requestAnimationFrame(render);
   }
   render();

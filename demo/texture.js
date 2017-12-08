@@ -1,5 +1,5 @@
 import { compile } from '../src/index';
-import {mat4} from 'gl-matrix';
+import { mat4 } from 'gl-matrix';
 
 async function loadImage(url) {
   const image = new Image();
@@ -30,24 +30,32 @@ precision mediump float;
 uniform sampler2D uSample;
 varying vec2 vTexCoord;
 void main() {
+  uSample;
+  vTexCoord;
   gl_FragColor = texture2D(uSample, vTexCoord);
 }`;
 
   const gl = document.getElementById('root').getContext('webgl');
 
-  const { program, attributes, uniforms, fillElements, drawArrays, drawElements } = compile({
+  const { program, attributes, uniforms, fillElements, drawArrays, drawElements, createElementsBuffer } = compile({
     vShader, fShader, gl
   });
-  gl.useProgram(program);
-  fillElements([0, 1, 2]);
-  attributes.aPosition.fill([-1, 1, -1, -1, 1, -1]);
-  attributes.aTexCoord.fill([0, 0, 0, 1, 1, 1]);
-  uniforms.uSample.fill(image);
+
+  fillElements(createElementsBuffer([0, 1, 2]));
+  attributes.aPosition.fill(
+    attributes.aPosition.createBuffer([-1, 1, -1, -1, 1, -1])
+  );
+  attributes.aTexCoord.fill(
+    attributes.aTexCoord.createBuffer([0, 0, 0, 1, 1, 1])
+  );
+  uniforms.uSample.fill(
+    uniforms.uSample.createTexture(image)
+  );
 
   function render() {
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
-    drawElements();
+    drawElements(3);
   }
   render();
 
