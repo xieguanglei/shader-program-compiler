@@ -14,11 +14,12 @@ async function loadImage(url) {
 
 (async function () {
 
+  const image = await loadImage('./resource/coord.png');
+
   const gl = document.getElementById('root').getContext('webgl');
 
-  async function drawFramebuffer() {
 
-    const image = await loadImage('./resource/coord.png');
+  function drawFramebuffer() {
 
     const vShader = `
     attribute vec2 aPosition;
@@ -36,29 +37,34 @@ async function loadImage(url) {
       gl_FragColor = texture2D(uSample, vTexCoord);
     }`;
 
-    const { program, attributes, uniforms, fillElements, drawArrays, drawElements, frameBuffer } = compile({
+    const { program, attributes, uniforms, fillElements, drawArrays, drawElements, createFramebuffer, createElementsBuffer } = compile({
       vShader, fShader, gl
     });
 
     gl.useProgram(program);
-    fillElements([0, 1, 2]);
-    attributes.aPosition.fill([-1, 1, -1, -1, 1, -1, 1, 1]);
-    attributes.aTexCoord.fill([0, 0, 0, 1, 1, 1, 1, 0]);
-    uniforms.uSample.fill(image);
-    const tex = frameBuffer();
+    fillElements(createElementsBuffer([0, 1, 2]));
+    attributes.aPosition.fill(
+      attributes.aPosition.createBuffer([-1, 1, -1, -1, 1, -1, 1, 1])
+    );
+    attributes.aTexCoord.fill(
+      attributes.aTexCoord.createBuffer([0, 0, 0, 1, 1, 1, 1, 0])
+    );
+    uniforms.uSample.fill(uniforms.uSample.createTexture(image));
+
+    const { framebuffer, texture } = createFramebuffer();
+
     gl.clearColor(0.0, 1.0, 1.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
-    drawElements();
+    drawElements(3);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    return tex;
+    
+    return texture;
   }
 
-  const fb = await drawFramebuffer();
+  const texture = drawFramebuffer();
 
-  async function drawCanvas() {
-
-    const image = await loadImage('./resource/coord.png');
+  function drawCanvas() {
 
     const vShader = `
         attribute vec2 aPosition;
@@ -76,21 +82,24 @@ async function loadImage(url) {
           gl_FragColor = texture2D(uSample, vTexCoord);
         }`;
 
-    const { program, attributes, uniforms, fillElements, drawArrays, drawElements } = compile({
+    const { program, attributes, uniforms, fillElements, drawArrays, drawElements, createElementsBuffer } = compile({
       vShader, fShader, gl
     });
 
     gl.useProgram(program);
-    fillElements([0, 1, 2, 0, 2, 3]);
-    attributes.aPosition.fill([-1, 1, -1, -1, 1, -1, 1, 1]);
-    attributes.aTexCoord.fill([0, 0, 0, 1, 1, 1, 1, 0]);
-    uniforms.uSample.fill(fb);
-    // uniforms.uSample.fill(image);
+    fillElements(createElementsBuffer([0, 1, 2, 0, 2, 3]));
+    attributes.aPosition.fill(
+      attributes.aPosition.createBuffer([-1, 1, -1, -1, 1, -1, 1, 1])
+    );
+    attributes.aTexCoord.fill(
+      attributes.aTexCoord.createBuffer([0, 0, 0, 1, 1, 1, 1, 0])
+    );
+    uniforms.uSample.fill(texture);
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, 300, 300);
-    drawElements();
+    drawElements(6);
   }
 
   drawCanvas();
