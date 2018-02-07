@@ -3,6 +3,7 @@ import { mat4 } from 'gl-matrix';
 
 async function loadImage(url) {
   const image = new Image();
+  image.crossOrigin = true;
 
   await new Promise(function (resolve) {
     image.onload = resolve;
@@ -14,7 +15,7 @@ async function loadImage(url) {
 
 (async function () {
 
-  const image = await loadImage('./resource/coord.png');
+  const image = await loadImage('//img.alicdn.com/tfs/TB1apiEb8HH8KJjy0FbXXcqlpXa-1024-1024.png');
 
   const vShader = `
 precision mediump float;
@@ -41,21 +42,23 @@ void main() {
     vShader, fShader, gl
   });
 
-  fillElements(createElementsBuffer([0, 1, 2]));
+  fillElements(createElementsBuffer([0, 1, 2, 0, 2, 3]));
   attributes.aPosition.fill(
-    attributes.aPosition.createBuffer([-1, 1, -1, -1, 1, -1])
+    attributes.aPosition.createBuffer([-1, 1, -1, -1, 1, -1, 1, 1])
   );
   attributes.aTexCoord.fill(
-    attributes.aTexCoord.createBuffer([0, 0, 0, 1, 1, 1])
-  );
-  uniforms.uSample.fill(
-    uniforms.uSample.createTexture(image)
+    attributes.aTexCoord.createBuffer([0, 1, 0, 0, 1, 0, 1, 1])
   );
 
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+  const tex = uniforms.uSample.createTexture(image);
+  uniforms.uSample.fill(tex);
+
+  gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
   function render() {
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
-    drawElements(3);
+    drawElements(6);
   }
   render();
 

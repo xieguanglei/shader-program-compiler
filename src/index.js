@@ -122,7 +122,6 @@ function compile({ vShader, fShader, gl, options }) {
                 uniformMethodName = ['uniform', vecSize, baseType === 'FLOAT' ? 'f' : 'i', 'v'].join('');
                 manager.fill = function (data) {
                     gl[uniformMethodName](position, new ArrayType(data));
-                    // gl[uniformMethodName](gl.getUniformLocation(program, 'uColor[0]'), new ArrayType(data));
                 }
                 break;
             case 'MAT':
@@ -139,20 +138,31 @@ function compile({ vShader, fShader, gl, options }) {
                 } else {
                     textureCount++;
                 }
-                // uniformMethodName = ['uniform', '1', 'i'].join('');
 
-                manager.createTexture = function (image) {
+                manager.createTexture = function (image, flipY = true) {
                     const texture = gl.createTexture();
+
                     gl.activeTexture(gl[textureUnitName]);
                     gl.bindTexture(gl.TEXTURE_2D, texture);
+
                     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-                    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-                    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+                    if (flipY) {
+                        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+                    }
+
                     if (image instanceof Uint8Array) {
                         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, image);
                     } else {
                         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
                     }
+
+                    if (flipY) {
+                        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+                    }
+
                     gl.bindTexture(gl.TEXTURE_2D, null);
                     return texture;
                 };
@@ -162,23 +172,6 @@ function compile({ vShader, fShader, gl, options }) {
                     gl.uniform1i(position, textureUnitIndex);
                 }
 
-                // const texture = gl.createTexture();                
-                // manager.fill = function (image) {
-
-                //     if (image.src) {
-                //         // image or video
-                //         gl.activeTexture(gl[textureUnitName]);
-                //         gl.bindTexture(gl.TEXTURE_2D, texture);
-                //         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-                //         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-                //         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-                //         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-                //         gl.uniform1i(position, textureUnitIndex);
-                //     } else if (typeof image.unit === 'number' && image.texture) {
-                //         // framebuffer
-                //         gl.uniform1i(position, image.unit);
-                //     }
-                // }
                 manager.update = function (texture, image) {
                     gl.activeTexture(gl[textureUnitName]);
                     gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -223,6 +216,7 @@ function compile({ vShader, fShader, gl, options }) {
         drawElements: function (count) {
             gl.drawElements(gl.TRIANGLES, count, gl.UNSIGNED_SHORT, 0);
         },
+
         createElementsBuffer: function (value) {
             const buffer = gl.createBuffer();
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
@@ -230,25 +224,49 @@ function compile({ vShader, fShader, gl, options }) {
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
             return buffer;
         },
+
         fillElements: function (buffer) {
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
             return buffer;
         },
 
-        createFramebuffer: function () {
+        createFramebuffer: function (width, height, useColorBuffer = false) {
+
             const framebuffer = gl.createFramebuffer();
-            const tex = gl.createTexture();
-            gl.activeTexture(gl['TEXTURE' + (textureCount++)]);
-            gl.bindTexture(gl.TEXTURE_2D, tex);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 512, 512, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
             gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
-            gl.viewport(0, 0, 512, 512);
+            let colorTarget, depthTarget;
+
+            if (useColorBuffer) {
+                const renderbuffer = gl.createRenderbuffer();
+                gl.bindRenderbuffer(gl.RENDERBUFFER, renderbuffer);
+                gl.renderbufferStorage(gl.RENDERBUFFER, gl.RGBA4, width, height);
+                gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, renderbuffer);
+                colorTarget = renderbuffer;
+            } else {
+                const tex = gl.createTexture();
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, tex);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+                colorTarget = tex;
+            }
+
+            const renderbuffer = gl.createRenderbuffer();
+            gl.bindRenderbuffer(gl.RENDERBUFFER, renderbuffer);
+            gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, width, height);
+            gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, renderbuffer);
+            depthTarget = renderbuffer;
+
+            if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) != gl.FRAMEBUFFER_COMPLETE) {
+                throw new Erroe("this combination of attachments does not work");
+            }
+
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
             return {
                 framebuffer,
-                unit: textureCount - 1,
-                texture: tex
+                colorTarget, depthTarget
             };
         }
     };

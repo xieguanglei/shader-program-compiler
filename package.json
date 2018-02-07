@@ -1,33 +1,16 @@
 {
   "name": "shader-program-compiler",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "description": "",
   "main": "lib/index.js",
   "scripts": {
-    "prepublishOnly": "babel src -d lib",
-    "build": "gulp build",
-    "dev": "gulp dev"
+    "prepublishOnly": "gulp compile"
   },
   "devDependencies": {
-    "babel-cli": "^6.26.0",
-    "babel-loader": "^7.1.2",
-    "babel-plugin-transform-class-properties": "^6.24.1",
-    "babel-plugin-transform-object-rest-spread": "^6.26.0",
-    "babel-polyfill": "^6.26.0",
-    "babel-preset-env": "^1.6.0",
-    "eslint": "^4.7.2",
-    "eslint-loader": "^1.9.0",
-    "express": "^4.15.5",
     "gl-matrix": "^2.4.0",
     "gulp": "^3.9.1",
     "gulp-util": "^3.0.8",
-    "json-loader": "^0.5.7",
-    "raw-loader": "^0.5.1",
-    "uglifyjs-webpack-plugin": "^0.4.6",
-    "webpack": "^3.6.0",
-    "webpack-dev-middleware": "^1.12.0",
-    "webpack-dev-server": "^2.8.2",
-    "webpack-stream": "^4.0.0"
+    "dalaran": "^0.1.5"
   },
   "keywords": [],
   "author": "",

@@ -18,7 +18,6 @@ async function loadImage(url) {
 
   const gl = document.getElementById('root').getContext('webgl');
 
-
   function drawFramebuffer() {
 
     const vShader = `
@@ -42,29 +41,30 @@ async function loadImage(url) {
     });
 
     gl.useProgram(program);
-    fillElements(createElementsBuffer([0, 1, 2]));
+
+    const { framebuffer, colorTarget: texture } = createFramebuffer(512, 512);
+
+    fillElements(createElementsBuffer([0, 1, 2, 0, 2, 3]));
     attributes.aPosition.fill(
       attributes.aPosition.createBuffer([-1, 1, -1, -1, 1, -1, 1, 1])
     );
     attributes.aTexCoord.fill(
-      attributes.aTexCoord.createBuffer([0, 0, 0, 1, 1, 1, 1, 0])
+      attributes.aTexCoord.createBuffer([0, 1, 0, 0, 1, 0, 1, 1])
     );
-    uniforms.uSample.fill(uniforms.uSample.createTexture(image));
+    uniforms.uSample.fill(uniforms.uSample.createTexture(image, false));
 
-    const { framebuffer, texture } = createFramebuffer();
-
-    gl.clearColor(0.0, 1.0, 1.0, 1.0);
+    gl.clearColor(0.5, 0.8, 0.5, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
-    drawElements(3);
 
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    gl.viewport(0, 0, 512, 512);
+    drawElements(6);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    
+
     return texture;
   }
 
-  const texture = drawFramebuffer();
-
-  function drawCanvas() {
+  function drawCanvas(texture) {
 
     const vShader = `
         attribute vec2 aPosition;
@@ -102,5 +102,9 @@ async function loadImage(url) {
     drawElements(6);
   }
 
-  drawCanvas();
+  const texture = drawFramebuffer();
+  if (texture) {
+    drawCanvas(texture);
+  }
+
 })();
